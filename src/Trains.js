@@ -7,10 +7,10 @@ const state = {
   OOS: 2
 }
 
-const rectangle = (scene, x, y, width, height) => {
+const rectangle = (scene, x, y, width, height, color = 'red') => {
   var rect = new Phaser.Geom.Rectangle(x, y, width, height)
 
-  var graphics = scene.add.graphics({ fillStyle: { color: 'red' } })
+  var graphics = scene.add.graphics({ fillStyle: { color } })
 
   graphics.fillRectShape(rect)
 
@@ -21,14 +21,39 @@ let zoom = 0.25
 
 const scrollListener = (e) => {
   zoom -= e.deltaY * 0.001
-  if (zoom < 0.1) {
-    zoom = 0.1
+  if (zoom < 0.05) {
+    zoom = 0.05
   }
   if (zoom > 10) { zoom = 10 }
-  console.log(zoom)
 }
 
-let trains = []
+// let trains = []
+let tracks = []
+const checkCollisionZones = (train) => {
+  const safeSpeed = 5
+  if (train.track === 0 || train.track === 2) {
+    // collision zone 1EW
+    if (train.pos > 28 && train.pos < 40) {
+      train.speed = safeSpeed
+      train.state = 3
+    } else {
+      train.speed = train.maxSpeed
+      train.state = 0
+    }
+  } else if (train.track === 1) {
+    // collision track 2NS
+    if (train.pos > 2 && train.pos < 10) {
+      train.speed = safeSpeed
+      train.state = 3
+    } else if (train.pos > 26 && train.pos < 32) {
+      train.speed = safeSpeed
+      train.state = 3
+    } else {
+      train.speed = train.maxSpeed
+      train.state = 0
+    }
+  }
+}
 export default class Trains extends React.Component {
   constructor () {
     super()
@@ -41,12 +66,12 @@ export default class Trains extends React.Component {
   }
   async create () {
     const scene = this.state.game.scene.scenes[0]
-    const width = 2000
-    const height = 2000
+    const width = 30000
+    const height = 30000
 
     var cam = scene.cameras.main
 
-    cam.setBounds(0, 0, width, height).setZoom(1)
+    cam.setBounds(0, 0, width, height).setZoom(zoom)
     cam.scrollX = 0
     cam.scrollY = 0
 
@@ -64,44 +89,120 @@ export default class Trains extends React.Component {
 
     console.log(cam)
 
-    let track1 = []
+    let track1 = {
+      trains: [],
+      tiles: [],
+      collisionZones: [
+
+      ]
+    }
     for (let n = 0; n <= 1; n++) {
       for (let i = 0; i < 200; i++) {
-        track1[i] = rectangle(scene, i * 15, 400 + (200 * n), 15, 25)
+        track1.tiles[i] = rectangle(scene, i * 75, 400 + (200 * n), 75, 25)
       }
     }
+    tracks.push(track1)
 
-    let track2N = []
-    for (let i = 0; i < 200; i++) {
-      track2N[i] = rectangle(scene, 2200, i * 15, 25, 15)
+    let track2 = {
+      trains: [],
+      tiles: []
     }
-
-    let track2S = []
-    for (let i = 0; i < 200; i++) {
-      track2S[i] = rectangle(scene, 2400, i * 15, 25, 15)
-    }
-
-    let track3 = []
     for (let n = 0; n <= 1; n++) {
       for (let i = 0; i < 200; i++) {
-        track3[i] = rectangle(scene, i * 15, 2200 + (200 * n), 15, 25)
+        track2.tiles[i] = rectangle(scene, 2400 + (200 * n), i * 75, 25, 75)
       }
     }
+    tracks.push(track2)
+
+    let track3 = {
+      trains: [],
+      tiles: []
+    }
+    for (let n = 0; n <= 1; n++) {
+      for (let i = 0; i < 200; i++) {
+        track3.tiles[i] = rectangle(scene, i * 75, 2200 + (200 * n), 75, 25)
+      }
+    }
+    tracks.push(track3)
 
     let train1 = {
-      tracking: 12345,
-      track: 1,
+      tracking: 44444,
+      track: 0,
       pos: 0,
+      maxSpeed: 35,
       speed: 25,
+      dir: 1,
+      flipDir: function () { this.dir === 1 ? this.dir = -1 : this.dir = 1 },
       state: state.MOTION,
-      obj: rectangle(scene, 0, 0, 15, 50)
+      obj: rectangle(scene, 0, 400, 150, 25, 0xff0000)
     }
 
-    console.log(train1.obj)
+    let train2 = {
+      tracking: 33433,
+      track: 1,
+      pos: 0,
+      maxSpeed: 55,
+      speed: 25,
+      dir: 1,
+      flipDir: function () { this.dir === 1 ? this.dir = -1 : this.dir = 1 },
+      state: state.MOTION,
+      obj: rectangle(scene, 2400, 0, 25, 150, 0xff0000)
+    }
 
-    train1.obj.x = 500
+    let train3 = {
+      tracking: 45552,
+      track: 1,
+      pos: 200,
+      maxSpeed: 55,
+      speed: 25,
+      dir: -1,
+      flipDir: function () { this.dir === 1 ? this.dir = -1 : this.dir = 1 },
+      state: state.MOTION,
+      obj: rectangle(scene, 2600, 0, 25, 150, 0xff0000)
+    }
 
-    trains.push(train1)
+    let train4 = {
+      tracking: 52332,
+      track: 2,
+      pos: 0,
+      maxSpeed: 45,
+      speed: 25,
+      dir: 1,
+      flipDir: function () { this.dir === 1 ? this.dir = -1 : this.dir = 1 },
+      state: state.MOTION,
+      obj: rectangle(scene, 0, 2200, 150, 25, 0xff0000)
+    }
+
+    let train5 = {
+      tracking: 52336,
+      track: 2,
+      pos: 200,
+      maxSpeed: 45,
+      speed: 25,
+      dir: -1,
+      flipDir: function () { this.dir === 1 ? this.dir = -1 : this.dir = 1 },
+      state: state.MOTION,
+      obj: rectangle(scene, 0, 2400, 150, 25, 0xff0000)
+    }
+
+    let train6 = {
+      tracking: 41234,
+      track: 0,
+      pos: 200,
+      maxSpeed: 15,
+      speed: 15,
+      dir: -1,
+      flipDir: function () { this.dir === 1 ? this.dir = -1 : this.dir = 1 },
+      state: state.MOTION,
+      obj: rectangle(scene, 0, 600, 150, 25, 0xff0000)
+    }
+
+    window.trains.push(train1)
+    window.trains.push(train2)
+    window.trains.push(train3)
+    window.trains.push(train4)
+    window.trains.push(train5)
+    window.trains.push(train6)
 
     window.addEventListener('wheel', scrollListener)
   }
@@ -128,10 +229,44 @@ export default class Trains extends React.Component {
       this.game.origDragPoint = null
     }
 
-    for (let train of trains) {
+    const deltaA = 0.1 * delta
+    for (let train of window.trains) {
+      if (train.state === state.IDLING) {
+        continue
+      }
+      checkCollisionZones(train)
+      switch (train.track) {
+        case 0:
+        case 2: {
+          train.pos += train.speed / 75 * train.dir / deltaA
+          if (train.dir === 1 && train.pos >= 200) {
+            train.obj.y += 200
+            train.flipDir()
+          } else if (train.dir === -1 && train.pos <= 0) {
+            train.obj.y -= 200
+            train.flipDir()
+          }
+          train.obj.x = train.pos * 75
+          break
+        }
 
+        case 1: {
+          train.pos += train.speed / 75 * train.dir / deltaA
+          if (train.dir === 1 && train.pos >= 200) {
+            train.obj.x += 200
+            train.flipDir()
+          } else if (train.dir === -1 && train.pos <= 0) {
+            train.obj.x -= 200
+            train.flipDir()
+          }
+          train.obj.y = train.pos * 75
+          break
+        }
+
+        default:
+          break
+      }
     }
-
     camera.setZoom(zoom)
   }
 
@@ -152,7 +287,7 @@ export default class Trains extends React.Component {
         create: this.create.bind(this),
         update: this.update
       },
-      backgroundColor: 'rgba(100,100,100,1)'
+      backgroundColor: 'rgba(255,255,255,1)'
     }
     this.setState({ game: new Phaser.Game(config) })
   }
